@@ -5,44 +5,43 @@ import matplotlib.pyplot as plt
 import time
 import multiprocessing as mp
 
-def GenerisiGradove(numCities, width, height):
+def GenerisiGradove(numCities, sirina, visina):
     x = []
     y = []
     for i in range(0,numCities):
-        x.append(random.randint(0, width - 100) + 40)
-        y.append(random.randint(0, height - 100) + 40)
+        x.append(random.randint(0, sirina - sirina/20))
+        y.append(random.randint(0, visina - visina/20))
     return (x, y)
 
-class geneticOpt(object):
-    def __init__(self, numIter, numCities, popSize, x, y, paralelno = False):
-	# Initialize data
+class TSPUsingGA(object):
+    def __init__(self, numIter, numCities, popSize, gradovi, sirina = 1000, visina = 1000, paralelno = False):
+	    # Inicijalizacija podataka
         self.generation = 0
-        self.width = 1000
-        self.height = 1000
+        self.sirina = sirina
+        self.visina = visina
         self.numIter = numIter
        	self.numCities = numCities
        	self.popSize = popSize
        	self.paralelno = paralelno
        	self.numThreads = 4
-       	self.x = x
-       	self.y = y 
-       	self.population = [] #chromosome[]
-       	#self.current = Chromosome(self.numCities, self)
+       	self.x = gradovi[0]
+       	self.y = gradovi[1]
+       	self.population = [] 
+       	#self.current = Hromozom(self.numCities, self)
 
-
-	# Set up population
+        # Set up population
         for i in range(self.popSize):
-            self.population.append(Chromosome(self.numCities, self))
+            self.population.append(Hromozom(self.numCities, self))
             self.population[i].Mutate()
-	
 
-	# Pick out the strongest
+    def Run(self):
+	    # Pick out the strongest
         sorted(self.population, key=lambda c: c.cost)
         #self.Sort(self.population, self.population[0])
         self.current = self.population[0];
         
         start = time.time()
-	# Loop through
+	    # Loop through
         for i in range(self.numIter):
             self.Evolve(i)
             
@@ -129,20 +128,24 @@ class geneticOpt(object):
 	# Fill in node graphic
         fig = plt.figure()
         fig.suptitle("Ukupna udaljenost: "+ str(round(self.current.cost, 2)))
-        plt.plot(self.x, self.y, 'bo')
-        plt.axis([0, self.width, 0, self.height])
+        plt.plot(self.x, self.y, 'ro', label='Čvorovi')
+        
+        plt.axis([0, self.sirina, 0, self.visina])
 
 	# Set up edges
         for i in range(self.numCities):
             icity = self.current.genes[i]
             if (i != 0):
                 last = self.current.genes[i - 1]    
-                plt.plot([self.x[icity], self.x[last]], [self.y[icity], self.y[last]], 'k-', lw=1)            
-                
+                plt.plot([self.x[icity], self.x[last]], [self.y[icity], self.y[last]], 'k-', lw=1)
+        
+        plt.plot([self.x[self.current.genes[0]], self.x[self.current.genes[self.numCities - 1]]], [self.y[self.current.genes[0]], self.y[self.current.genes[self.numCities - 1]]], 'k-', lw=1, label='Grane')   
+        
+        plt.legend()  
         plt.show()
         print("Vrijeme izvršenja: ", vrijeme)
 
-class Chromosome(object):
+class Hromozom(object):
     def __init__(self, numCities, gen):
         self.gen = gen
         self.numCities = numCities
@@ -159,6 +162,34 @@ class Chromosome(object):
         d = 0
         for i in range(1, len(self.genes)):
             d += self.gen.Distance(self.genes[i], self.genes[i - 1])
+        d += self.gen.Distance(self.genes[0], self.genes[len(self.genes) - 1])
+        return d
+    
+    def CostParallel(self):
+        d = 0
+        for i in range(1, len(self.genes)):
+            city1 = self.genes[i]
+            city2 = self.genes[i-1]
+            if (city1 >= self.numCities):
+                city1 = 0
+            if (city2 >= self.numCities):
+                city2 = 0
+    
+            xdiff = self.x[city1] - self.x[city2]
+            ydiff = self.y[city1] - self.y[city2]
+            
+            d += math.sqrt(xdiff*xdiff + ydiff*ydiff)
+        city1 = self.genes[0]
+        city2 = self.genes[len(self.genes) - 1]
+        if (city1 >= self.numCities):
+            city1 = 0
+        if (city2 >= self.numCities):
+            city2 = 0
+
+        xdiff = self.x[city1] - self.x[city2]
+        ydiff = self.y[city1] - self.y[city2]
+        
+        d += math.sqrt(xdiff*xdiff + ydiff*ydiff)
         return d
     
     
@@ -259,10 +290,13 @@ def main():
     numIter = 5
     numCities = 5
     popSize = 100*numCities//2
-    gradovi = GenerisiGradove(numCities, 1000, 1000)
-    k = geneticOpt(numIter, numCities, popSize, gradovi[0], gradovi[1])
+    sirina = 100
+    visina = 100
+    gradovi = GenerisiGradove(numCities, sirina, visina)
+    #ga = TSPUsingGA(numIter, numCities, popSize, gradovi, sirina, visina)
+    #ga.Run()
     if __name__ == '__main__':
-        __spec__ = "ModuleSpec(name='builtins', loader=<class '_frozen_importlib.BuiltinImporter'>)"
-        k = geneticOpt(numIter, numCities, popSize, gradovi[0], gradovi[1], True)
+        ga = TSPUsingGA(numIter, numCities, popSize, gradovi, sirina, visina, True)
+        ga.Run()
     
 main()
